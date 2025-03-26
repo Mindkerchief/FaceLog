@@ -60,7 +60,7 @@ A webpage application that can record attendance using the attendee's face. This
 1. Download the latest version of [LocalLoan][release-page].
 2. Install [FaceLog-1.0.0-Beta.exe][latest-release].
 3. Make sure to include `pip` during Python installation.
-9. Open [127.0.0.3:3000](http://127.0.0.3:3000) using browser to access the web application.
+4. Run the application and open [127.0.0.3:3000](http://127.0.0.3:3000) using browser to access the web application.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -83,7 +83,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <!-- Reference -->
 [facelog-thumbnail]: https://github.com/Mindkerchief/FaceLog/assets/130748576/0e2ea03f-d343-4ba2-9807-f507ac6cfe3d
-[facelog-badge]: https://img.shields.io/badge/WebApp-Real_time_Facial_Recognition_Attendance_System-6850A8
+[facelog-badge]: https://img.shields.io/badge/WebApp-Realtime_Facial_Recognition_Attendance_System-6850A8
 
 [facial-recognition]: https://github.com/Mindkerchief/FaceLog/assets/130748576/606640e0-acb8-41d1-8a3e-0dcda1857c30
 [face-capturing]: https://github.com/Mindkerchief/FaceLog/assets/130748576/f9ac633e-32eb-4fda-91ff-2f9b12edf2db
