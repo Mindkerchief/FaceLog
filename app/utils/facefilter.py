@@ -3,10 +3,10 @@ import cv2
 
 def face_filter():
     # Directory where faces will be saved
-    os.makedirs('test_save', exist_ok=True)
+    os.makedirs('app/utils/test_save', exist_ok=True)
     # Directory containing the faces to be filtered
     # faces_folder_dir = 'test_faces'
-    faces_folder_dir = 'faces'
+    faces_folder_dir = 'app/utils/faces'
     os.makedirs(faces_folder_dir, exist_ok=True)
     
     folder_count = 0
@@ -43,11 +43,11 @@ def face_filter():
                 # os.remove(image_path)
                 # continue
 
-            os.makedirs(f'facetest/{person_name}', exist_ok=True)
+            os.makedirs(f'app/utils/facetest/{person_name}', exist_ok=True)
             for (x, z, w, h) in faces:
                 # Save the faces from the image
                 # face_img = image[z:z+h+30, x:x+w+30]
-                # cv2.imwrite(f'facetest/{person_name}/{face_count}-{image_name}', face_img)
+                # cv2.imwrite(f'app/utils/facetest/{person_name}/{face_count}-{image_name}', face_img)
                 face_count += 1
             image_count += 1
         folder_count += 1
@@ -59,4 +59,5 @@ def face_filter():
     print(f"No faces found: {no_face}")
     print(f"Multiple face found: {multiple_face}")
 
-face_filter()
+if __name__ == '__main__':
+    face_filter()

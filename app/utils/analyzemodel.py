@@ -6,13 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from sklearn.decomposition import PCA
 
-if os.path.exists('models/svm_model.pkl'):
-    label_encoder = joblib.load('models/label_encoder.pkl')
+if os.path.exists('app/models/svm_model.pkl'):
+    label_encoder = joblib.load('app/models/label_encoder.pkl')
 
 def analyze_model():
     global label_encoder
-    data = np.load('models/features.npy')
-    labels = np.load('models/labels.npy')
+    data = np.load('app/models/features.npy')
+    labels = np.load('app/models/labels.npy')
 
     # Perform PCA to reduce to 2 dimensions for visualization
     pca = PCA(n_components=2)
@@ -43,7 +43,7 @@ def analyze_model():
     
     img = io.BytesIO()
     plt.savefig(img, format='png')
-    plt.savefig('scatter_plot.png')
+    plt.savefig('app/utils/scatter_plot.png')
 
 def generate_random_color():
     r = random.randint(0, 200)
@@ -51,4 +51,5 @@ def generate_random_color():
     b = random.randint(0, 200)
     return '#{:02x}{:02x}{:02x}'.format(r, g, b)
 
-analyze_model()
+if __name__ == '__main__':
+    analyze_model()

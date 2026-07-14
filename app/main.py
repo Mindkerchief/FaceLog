@@ -1,61 +1,65 @@
 import os
 import io
-import cv2
 import time
 import datetime
 import random
+from pathlib import Path
+from threading import Thread
+
+import cv2
 import torch
 import joblib
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt 
-from threading import Thread
-from sklearn.svm import SVC
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
 from cryptography.fernet import Fernet
 from facenet_pytorch import InceptionResnetV1
 from flask import Flask, render_template, Response, request, jsonify, send_file
-from waitress import serve
+from sklearn.svm import SVC
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import LabelEncoder
 
 app = Flask(__name__)
 camera = None
 camera_mode = None
 camera_index = 0
 
-# Load face recognition models
+# Load facial recognition models
 svm_model = None
 label_encoder = None
 facenet_model = InceptionResnetV1(pretrained='vggface2').eval()
 
 # Create the attendance folder and file
-ATTENDANCE_FOLDER = os.path.join('attendance', datetime.date.today().strftime('%m%d%Y'))
+ATTENDANCE_DIR = os.path.join('app', 'attendance')
+ATTENDANCE_FILE = os.path.join(ATTENDANCE_DIR, f'{datetime.date.today().strftime('%m%d%Y')}.xlsx')
+PASSKEY_DIR = os.path.join('app', 'passkey')
+MODEL_DIR = os.path.join('app', 'models')
 last_save_attendance = time.time()
 
-os.makedirs('attendance', exist_ok=True)
-if not os.path.exists(f'{ATTENDANCE_FOLDER}.xlsx'):
+os.makedirs(ATTENDANCE_DIR, exist_ok=True)
+if not os.path.exists(ATTENDANCE_FILE):
     attendance = pd.DataFrame(columns=['Name', 'Time', 'Probability'])
 else:
-    attendance = pd.read_excel(f'{ATTENDANCE_FOLDER}.xlsx')
+    attendance = pd.read_excel(ATTENDANCE_FILE)
 
 def generate_key():
     key = Fernet.generate_key()
-    with open('passkey/secret.key', 'wb') as key_file:
+    with open(f'{PASSKEY_DIR}/secret.key', 'wb') as key_file:
         key_file.write(key)
     return key
 
 def load_key():
-    os.makedirs('passkey', exist_ok=True)
-    if not os.path.exists('passkey/secret.key'):
+    os.makedirs(PASSKEY_DIR, exist_ok=True)
+    if not os.path.exists(f'{PASSKEY_DIR}/secret.key'):
         key = generate_key()
         return key
     else:
-        return open('passkey/secret.key', 'rb').read()
-    
+        return open(f'{PASSKEY_DIR}/secret.key', 'rb').read()
+
 # Prepare the key and password
 key = load_key()
 cipher_suite = Fernet(key)
-PASSWORD_FILE = 'passkey/encrypt.lock'
+PASSWORD_FILE = f'{PASSKEY_DIR}/encrypt.lock'
 
 # Initialize with a default password if the file doesn't exist
 if not os.path.exists(PASSWORD_FILE):
@@ -72,9 +76,9 @@ def load_models():
     global svm_model
     global label_encoder
     
-    if os.path.exists('models/svm_model.pkl') and os.path.exists('models/label_encoder.pkl') and os.path.exists('models/features.npy') and os.path.exists('models/labels.npy'):
-        svm_model = joblib.load('models/svm_model.pkl')
-        label_encoder = joblib.load('models/label_encoder.pkl')
+    if os.path.exists(f'{MODEL_DIR}/svm_model.pkl') and os.path.exists(f'{MODEL_DIR}/label_encoder.pkl') and os.path.exists(f'{MODEL_DIR}/features.npy') and os.path.exists(f'{MODEL_DIR}/labels.npy'):
+        svm_model = joblib.load(f'{MODEL_DIR}/svm_model.pkl')
+        label_encoder = joblib.load(f'{MODEL_DIR}/label_encoder.pkl')
     else:
         return jsonify({"error": "Models Missing"}), 401
     return jsonify({"message": "Models Loaded"}), 200
@@ -115,7 +119,7 @@ def stop_feed():
     # Save the attendance to an Excel file
     if not attendance.empty:
         attendance = attendance.sort_values(by='Name')
-        attendance.to_excel(f'{ATTENDANCE_FOLDER}.xlsx', index=False)
+        attendance.to_excel(ATTENDANCE_FILE, index=False)
     return 'Webcam stopped'
 
 @app.route('/capture_images', methods=['POST'])
@@ -164,7 +168,7 @@ def training():
     X = []
     y = []
 
-    os.makedirs('models', exist_ok=True)
+    os.makedirs(MODEL_DIR, exist_ok=True)
 
     if not os.path.exists(faces_dir):
         return jsonify({"error": "No faces found"}), 401
@@ -205,8 +209,8 @@ def training():
     y = np.array(y)
 
     # Save features and labels
-    np.save('models/features.npy', X)
-    np.save('models/labels.npy', y)
+    np.save(f'{MODEL_DIR}/features.npy', X)
+    np.save(f'{MODEL_DIR}/labels.npy', y)
     
     # Encode labels
     label_encoder = LabelEncoder()
@@ -217,8 +221,8 @@ def training():
     svm_model.fit(X, y_encoded)
 
     # Save model and label encoder
-    joblib.dump(svm_model, 'models/svm_model.pkl')
-    joblib.dump(label_encoder, 'models/label_encoder.pkl')
+    joblib.dump(svm_model, f'{MODEL_DIR}/svm_model.pkl')
+    joblib.dump(label_encoder, f'{MODEL_DIR}/label_encoder.pkl')
 
     # Get the unique classes from the SVM model
     unique_classes = svm_model.classes_
@@ -240,8 +244,8 @@ def training():
 @app.route('/analyze_model', methods=['GET'])
 def analyze_model():
     global label_encoder
-    data = np.load('models/features.npy')
-    labels = np.load('models/labels.npy')
+    data = np.load(f'{MODEL_DIR}/features.npy')
+    labels = np.load(f'{MODEL_DIR}/labels.npy')
 
     # Perform PCA to reduce to 2 dimensions for visualization
     pca = PCA(n_components=2)
@@ -279,22 +283,22 @@ def analyze_model():
 
 @app.route('/read_attendance')
 def read_attendance_today():
-    global ATTENDANCE_FOLDER
-    if not os.path.exists(f'{ATTENDANCE_FOLDER}.xlsx'):
+    global ATTENDANCE_FILE
+    if not os.path.exists(ATTENDANCE_FILE):
         return jsonify({"error": "No attendance for today"}), 401
     
-    df = pd.read_excel(f'{ATTENDANCE_FOLDER}.xlsx')
+    df = pd.read_excel(ATTENDANCE_FILE)
     data = df.to_dict(orient='records')
     return jsonify(data)
 
 @app.route('/list_attendance_files', methods=['GET'])
 def list_attendance_files():
-    attendance_files = [f for f in os.listdir('attendance') if f.endswith('.xlsx')]
+    attendance_files = [f for f in os.listdir(f'{ATTENDANCE_DIR}') if f.endswith('.xlsx')]
     return jsonify(attendance_files)
 
 @app.route('/read_attendance/<filename>', methods=['GET'])
 def read_attendance(filename):
-    attendance_file_path = os.path.join('attendance', filename)
+    attendance_file_path = os.path.join(ATTENDANCE_DIR, filename)
     if not os.path.exists(attendance_file_path):
         return jsonify({"error": "File not found"}), 404
 
@@ -403,7 +407,7 @@ def generate_frame(camera):
         
 def recognize_faces(frame):
     global attendance
-    global ATTENDANCE_FOLDER
+    global ATTENDANCE_FILE
     global last_save_attendance
     current_time = time.time()
 
@@ -445,7 +449,7 @@ def recognize_faces(frame):
     if current_time - last_save_attendance >= 10:
         if not attendance.empty:
             attendance = attendance.sort_values(by='Name')
-            attendance.to_excel(f'{ATTENDANCE_FOLDER}.xlsx', index=False)
+            attendance.to_excel(ATTENDANCE_FILE, index=False)
             last_save_attendance = current_time
     return frame
 
@@ -472,6 +476,3 @@ def read_password():
 def write_password(encrypted_password):
     with open(PASSWORD_FILE, 'wb') as file:
         file.write(encrypted_password)
-
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=3000, debug=False)
