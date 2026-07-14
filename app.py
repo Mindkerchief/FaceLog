@@ -438,7 +438,8 @@ def recognize_faces(frame):
             # If the person doesn't exist, append the new record
             if proba > 0.7 and existing_record.empty:
                 attendance_time = datetime.datetime.now().strftime("%I:%M:%S %p")
-                attendance = attendance._append({'Name': person, 'Time': attendance_time, 'Probability': proba}, ignore_index=True)
+                new_row = {'Name': person, 'Time': attendance_time, 'Probability': proba}
+                attendance = pd.concat([attendance, pd.DataFrame([new_row])], ignore_index=True)
 
     # Save the Attendance every 10 seconds
     if current_time - last_save_attendance >= 10:
