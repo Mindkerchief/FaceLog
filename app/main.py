@@ -19,7 +19,6 @@ from sklearn.svm import SVC
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder
 
-app = Flask(__name__)
 camera = None
 camera_mode = None
 camera_index = 0
@@ -30,10 +29,11 @@ label_encoder = None
 facenet_model = InceptionResnetV1(pretrained='vggface2').eval()
 
 # Create the attendance folder and file
-ATTENDANCE_DIR = os.path.join('app', 'attendance')
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+ATTENDANCE_DIR = os.path.join(BASE_DIR, 'app', 'attendance')
 ATTENDANCE_FILE = os.path.join(ATTENDANCE_DIR, f'{datetime.date.today().strftime('%m%d%Y')}.xlsx')
-PASSKEY_DIR = os.path.join('app', 'passkey')
-MODEL_DIR = os.path.join('app', 'models')
+PASSKEY_DIR = os.path.join(BASE_DIR, 'app', 'passkey')
+MODEL_DIR = os.path.join(BASE_DIR, 'app', 'model')
 last_save_attendance = time.time()
 
 os.makedirs(ATTENDANCE_DIR, exist_ok=True)
@@ -67,284 +67,287 @@ if not os.path.exists(PASSWORD_FILE):
         encrypted_password = cipher_suite.encrypt(b'admin')  # Default password: 'admin'
         file.write(encrypted_password)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+def create_api_routes(app):
+    """Create and register all API routes with the Flask app"""
 
-@app.route('/load_models')
-def load_models():
-    global svm_model
-    global label_encoder
-    
-    if os.path.exists(f'{MODEL_DIR}/svm_model.pkl') and os.path.exists(f'{MODEL_DIR}/label_encoder.pkl') and os.path.exists(f'{MODEL_DIR}/features.npy') and os.path.exists(f'{MODEL_DIR}/labels.npy'):
-        svm_model = joblib.load(f'{MODEL_DIR}/svm_model.pkl')
-        label_encoder = joblib.load(f'{MODEL_DIR}/label_encoder.pkl')
-    else:
-        return jsonify({"error": "Models Missing"}), 401
-    return jsonify({"message": "Models Loaded"}), 200
+    @app.route('/')
+    def index():
+        return render_template('index.html')
 
-@app.route('/face_recognition', methods=['GET'])
-def face_recognition():
-    global camera
-    global camera_mode
-
-    if svm_model is None or label_encoder is None:
-        return jsonify({"error": "Models Missing"}), 401
-    if camera is None:
-        camera = VideoCamera()
-        camera_mode = 'recognition'
-    return Response(generate_frame(camera), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/face_capturing', methods=['GET'])
-def face_capturing():
-    global camera
-    global camera_mode
-    
-    if camera is None:
-        camera = VideoCamera()
-        camera_mode = 'capture'
-    return Response(generate_frame(camera), mimetype='multipart/x-mixed-replace; boundary=frame')
+    @app.route('/load_models')
+    def load_models():
+        global svm_model
+        global label_encoder
         
-@app.route('/stop_feed')
-def stop_feed():
-    global camera
-    global camera_mode
-    global attendance
-
-    if camera is not None:
-        camera.__del__()
-        camera = None
-        camera_mode = None
-
-    # Save the attendance to an Excel file
-    if not attendance.empty:
-        attendance = attendance.sort_values(by='Name')
-        attendance.to_excel(ATTENDANCE_FILE, index=False)
-    return 'Webcam stopped'
-
-@app.route('/capture_images', methods=['POST'])
-def capture_images():
-    global camera
-    global camera_mode
-
-    user_name = request.json.get('user_name')
-    user_folder = os.path.join('faces', user_name)
-    if not user_name:
-        return jsonify({"error": "Username is required"}), 401
-    
-    if os.path.exists(user_folder):
-        return jsonify({"error": "Username already exist"}), 401
-    else:
-        os.makedirs(user_folder, exist_ok=True)
-
-    # Capture images
-    count = 0
-    image_number = 1
-    while count < 50:
-        if camera is None:
-            break
-        # Increment the image number if the file already exists
-        while os.path.exists(os.path.join(user_folder, f'{image_number}.jpg')):
-            image_number += 1
-            
-        frame = camera.capture_frame()
-        file_path = os.path.join(user_folder, f'{image_number}.jpg')
-        cv2.imwrite(file_path, frame)
-        count += 1
-        image_number += 1
-        cv2.waitKey(800)
-
-    return jsonify({"message": f"Captured {count} images"}), 200
-
-@app.route('/training')
-def training():
-    global svm_model
-    global label_encoder
-    faces_dir = 'faces'
-    image_count = 0
-    face_count = 0
-    no_face = 0
-    multiple_face = 0
-    X = []
-    y = []
-
-    os.makedirs(MODEL_DIR, exist_ok=True)
-
-    if not os.path.exists(faces_dir):
-        return jsonify({"error": "No faces found"}), 401
-
-    for person_name in os.listdir(faces_dir):
-        person_dir = os.path.join(faces_dir, person_name)
-        if not os.path.isdir(person_dir):
-            continue
-        for image_name in os.listdir(person_dir):
-            image_path = os.path.join(person_dir, image_name)
-            image = cv2.imread(image_path)
-            if image is None:
-                continue
-            gray_frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(64, 64))
-            
-            # Check if the image has no face or multiple faces
-            if len(faces) == 0:
-                os.remove(image_path)
-                no_face += 1
-                continue
-            elif len(faces) > 1:
-                os.remove(image_path)
-                multiple_face += 1
-                continue
-            
-            for (x, z, w, h) in faces:
-                face_img = image[z:z+h, x:x+w]
-                features = extract_features(face_img)
-                face_count += 1
-                break
-            X.append(features)
-            y.append(person_name)
-            image_count += 1
-
-    X = np.array(X)
-    y = np.array(y)
-
-    # Save features and labels
-    np.save(f'{MODEL_DIR}/features.npy', X)
-    np.save(f'{MODEL_DIR}/labels.npy', y)
-    
-    # Encode labels
-    label_encoder = LabelEncoder()
-    y_encoded = label_encoder.fit_transform(y)
-
-    # Train SVM model
-    svm_model = SVC(kernel='linear', probability=True)
-    svm_model.fit(X, y_encoded)
-
-    # Save model and label encoder
-    joblib.dump(svm_model, f'{MODEL_DIR}/svm_model.pkl')
-    joblib.dump(label_encoder, f'{MODEL_DIR}/label_encoder.pkl')
-
-    # Get the unique classes from the SVM model
-    unique_classes = svm_model.classes_
-    num_classes = len(unique_classes)
-
-    # Print the results
-    print("Model Saved")
-    print(f"Unique faces: {num_classes}")
-    print(f"Image processed: {image_count}")
-    print(f"Faces saved: {face_count}")
-    print(f"No face: {no_face}")
-    print(f"Multiple face: {multiple_face}")
-
-    for i, class_label in enumerate(unique_classes):
-        decoded_label = label_encoder.inverse_transform([class_label])[0]
-        print(f"Class {i}: {decoded_label}")
-    return jsonify({"message" : f"Registered Faces: {num_classes}"})
-    
-@app.route('/analyze_model', methods=['GET'])
-def analyze_model():
-    global label_encoder
-    data = np.load(f'{MODEL_DIR}/features.npy')
-    labels = np.load(f'{MODEL_DIR}/labels.npy')
-
-    # Perform PCA to reduce to 2 dimensions for visualization
-    pca = PCA(n_components=2)
-    transformed_data = pca.fit_transform(data)
-    
-    # Plot the data points and decision boundaries
-    plt.figure(figsize=(10, 8))
-    random_color = generate_random_color()
-    name_index = 0
-    plt.scatter(transformed_data[0, 0], transformed_data[0, 1], label=label_encoder.inverse_transform([name_index])[0], c=random_color)
-    
-    for i in range(len(labels)):
-        if labels[i] != label_encoder.inverse_transform([name_index])[0]:
-            random_color = generate_random_color()
-            name_index += 1
-            plt.scatter(transformed_data[i, 0], transformed_data[i, 1], label=label_encoder.inverse_transform([name_index])[0], c=random_color)
+        if os.path.exists(f'{MODEL_DIR}/svm_model.pkl') and os.path.exists(f'{MODEL_DIR}/label_encoder.pkl') and os.path.exists(f'{MODEL_DIR}/features.npy') and os.path.exists(f'{MODEL_DIR}/labels.npy'):
+            svm_model = joblib.load(f'{MODEL_DIR}/svm_model.pkl')
+            label_encoder = joblib.load(f'{MODEL_DIR}/label_encoder.pkl')
         else:
-            plt.scatter(transformed_data[i, 0], transformed_data[i, 1], c=random_color)
-    
-    # Set the plot properties
-    plt.xlim(transformed_data[:, 0].min() - 0.1, transformed_data[:, 0].max() + 0.3)
-    plt.ylim(transformed_data[:, 1].min() - 0.1, transformed_data[:, 1].max() + 0.1)
-    plt.grid(True)
-    plt.legend()
-    plt.xlabel('PCA Component X')
-    plt.ylabel('PCA Component Y')
-    plt.title('FaceLog SVM Model Scatter Plot')
-    
-    # Save the plot to a BytesIO object
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
-    
-    return send_file(img, mimetype='image/png')
+            return jsonify({"error": "Models Missing"}), 401
+        return jsonify({"message": "Models Loaded"}), 200
 
-@app.route('/read_attendance')
-def read_attendance_today():
-    global ATTENDANCE_FILE
-    if not os.path.exists(ATTENDANCE_FILE):
-        return jsonify({"error": "No attendance for today"}), 401
-    
-    df = pd.read_excel(ATTENDANCE_FILE)
-    data = df.to_dict(orient='records')
-    return jsonify(data)
+    @app.route('/face_recognition', methods=['GET'])
+    def face_recognition():
+        global camera
+        global camera_mode
 
-@app.route('/list_attendance_files', methods=['GET'])
-def list_attendance_files():
-    attendance_files = [f for f in os.listdir(f'{ATTENDANCE_DIR}') if f.endswith('.xlsx')]
-    return jsonify(attendance_files)
+        if svm_model is None or label_encoder is None:
+            return jsonify({"error": "Models Missing"}), 401
+        if camera is None:
+            camera = VideoCamera()
+            camera_mode = 'recognition'
+        return Response(generate_frame(camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/read_attendance/<filename>', methods=['GET'])
-def read_attendance(filename):
-    attendance_file_path = os.path.join(ATTENDANCE_DIR, filename)
-    if not os.path.exists(attendance_file_path):
-        return jsonify({"error": "File not found"}), 404
+    @app.route('/face_capturing', methods=['GET'])
+    def face_capturing():
+        global camera
+        global camera_mode
+        
+        if camera is None:
+            camera = VideoCamera()
+            camera_mode = 'capture'
+        return Response(generate_frame(camera), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    df = pd.read_excel(attendance_file_path)
-    data = df.to_dict(orient='records')
-    return jsonify(data)
+    @app.route('/stop_feed')
+    def stop_feed():
+        global camera
+        global camera_mode
+        global attendance
 
-@app.route('/verify_password', methods=['POST'])
-def verify_password():
-    data = request.json
-    password = data.get('password')
-    
-    encrypted_password = read_password()
-    decrypted_password = cipher_suite.decrypt(encrypted_password).decode('utf-8')
-    
-    if password == decrypted_password:
-        return jsonify({'status': 'success'}), 200
-    else:
-        return jsonify({'status': 'failure'}), 401
+        if camera is not None:
+            camera.__del__()
+            camera = None
+            camera_mode = None
 
-@app.route('/update_password', methods=['POST'])
-def update_password():
-    data = request.json
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    
-    encrypted_password = read_password()
-    decrypted_password = cipher_suite.decrypt(encrypted_password).decode('utf-8')
-    
-    if current_password == decrypted_password:
-        new_encrypted_password = cipher_suite.encrypt(new_password.encode('utf-8'))
-        write_password(new_encrypted_password)
-        return jsonify({'status': 'success'}), 200
-    else:
-        return jsonify({'status': 'failure'}), 401
+        # Save the attendance to an Excel file
+        if not attendance.empty:
+            attendance = attendance.sort_values(by='Name')
+            attendance.to_excel(ATTENDANCE_FILE, index=False)
+        return 'Webcam stopped'
 
-@app.route('/list_cameras', methods=['GET'])
-def get_cameras():
-    cameras = list_cameras()
-    return jsonify(cameras)
+    @app.route('/capture_images', methods=['POST'])
+    def capture_images():
+        global camera
+        global camera_mode
 
-@app.route('/change_camera/<cameraIndex>', methods=['GET'])
-def change_camera(cameraIndex):
-    global camera_index
-    camera_index = int(cameraIndex)
-    return jsonify({"message": "Camera change."}), 200
+        user_name = request.json.get('user_name')
+        user_folder = os.path.join(BASE_DIR, 'app', 'faces', user_name)
+        if not user_name:
+            return jsonify({"error": "Username is required"}), 401
+        
+        if os.path.exists(user_folder):
+            return jsonify({"error": "Username already exist"}), 401
+        else:
+            os.makedirs(user_folder, exist_ok=True)
+
+        # Capture images
+        count = 0
+        image_number = 1
+        while count < 50:
+            if camera is None:
+                break
+            # Increment the image number if the file already exists
+            while os.path.exists(os.path.join(user_folder, f'{image_number}.jpg')):
+                image_number += 1
+            
+            frame = camera.capture_frame()
+            file_path = os.path.join(user_folder, f'{image_number}.jpg')
+            cv2.imwrite(file_path, frame)
+            count += 1
+            image_number += 1
+            cv2.waitKey(800)
+
+        return jsonify({"message": f"Captured {count} images"}), 200
+
+    @app.route('/training')
+    def training():
+        global svm_model
+        global label_encoder
+        faces_dir = os.path.join(BASE_DIR, 'app', 'faces')
+        image_count = 0
+        face_count = 0
+        no_face = 0
+        multiple_face = 0
+        X = []
+        y = []
+
+        os.makedirs(MODEL_DIR, exist_ok=True)
+
+        if not os.path.exists(faces_dir):
+            return jsonify({"error": "No faces found"}), 401
+
+        for person_name in os.listdir(faces_dir):
+            person_dir = os.path.join(faces_dir, person_name)
+            if not os.path.isdir(person_dir):
+                continue
+            for image_name in os.listdir(person_dir):
+                image_path = os.path.join(person_dir, image_name)
+                image = cv2.imread(image_path)
+                if image is None:
+                    continue
+                gray_frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(64, 64))
+                
+                # Check if the image has no face or multiple faces
+                if len(faces) == 0:
+                    os.remove(image_path)
+                    no_face += 1
+                    continue
+                elif len(faces) > 1:
+                    os.remove(image_path)
+                    multiple_face += 1
+                    continue
+                
+                for (x, z, w, h) in faces:
+                    face_img = image[z:z+h, x:x+w]
+                    features = extract_features(face_img)
+                    face_count += 1
+                    break
+                X.append(features)
+                y.append(person_name)
+                image_count += 1
+
+        X = np.array(X)
+        y = np.array(y)
+
+        # Save features and labels
+        np.save(f'{MODEL_DIR}/features.npy', X)
+        np.save(f'{MODEL_DIR}/labels.npy', y)
+        
+        # Encode labels
+        label_encoder = LabelEncoder()
+        y_encoded = label_encoder.fit_transform(y)
+
+        # Train SVM model
+        svm_model = SVC(kernel='linear', probability=True)
+        svm_model.fit(X, y_encoded)
+
+        # Save model and label encoder
+        joblib.dump(svm_model, f'{MODEL_DIR}/svm_model.pkl')
+        joblib.dump(label_encoder, f'{MODEL_DIR}/label_encoder.pkl')
+
+        # Get the unique classes from the SVM model
+        unique_classes = svm_model.classes_
+        num_classes = len(unique_classes)
+
+        # Print the results
+        print("Model Saved")
+        print(f"Unique faces: {num_classes}")
+        print(f"Image processed: {image_count}")
+        print(f"Faces saved: {face_count}")
+        print(f"No face: {no_face}")
+        print(f"Multiple face: {multiple_face}")
+
+        for i, class_label in enumerate(unique_classes):
+            decoded_label = label_encoder.inverse_transform([class_label])[0]
+            print(f"Class {i}: {decoded_label}")
+        return jsonify({"message" : f"Registered Faces: {num_classes}"})
+        
+    @app.route('/analyze_model', methods=['GET'])
+    def analyze_model():
+        global label_encoder
+        data = np.load(f'{MODEL_DIR}/features.npy')
+        labels = np.load(f'{MODEL_DIR}/labels.npy')
+
+        # Perform PCA to reduce to 2 dimensions for visualization
+        pca = PCA(n_components=2)
+        transformed_data = pca.fit_transform(data)
+        
+        # Plot the data points and decision boundaries
+        plt.figure(figsize=(10, 8))
+        random_color = generate_random_color()
+        name_index = 0
+        plt.scatter(transformed_data[0, 0], transformed_data[0, 1], label=label_encoder.inverse_transform([name_index])[0], c=random_color)
+        
+        for i in range(len(labels)):
+            if labels[i] != label_encoder.inverse_transform([name_index])[0]:
+                random_color = generate_random_color()
+                name_index += 1
+                plt.scatter(transformed_data[i, 0], transformed_data[i, 1], label=label_encoder.inverse_transform([name_index])[0], c=random_color)
+            else:
+                plt.scatter(transformed_data[i, 0], transformed_data[i, 1], c=random_color)
+        
+        # Set the plot properties
+        plt.xlim(transformed_data[:, 0].min() - 0.1, transformed_data[:, 0].max() + 0.3)
+        plt.ylim(transformed_data[:, 1].min() - 0.1, transformed_data[:, 1].max() + 0.1)
+        plt.grid(True)
+        plt.legend()
+        plt.xlabel('PCA Component X')
+        plt.ylabel('PCA Component Y')
+        plt.title('FaceLog SVM Model Scatter Plot')
+        
+        # Save the plot to a BytesIO object
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        
+        return send_file(img, mimetype='image/png')
+
+    @app.route('/read_attendance')
+    def read_attendance_today():
+        global ATTENDANCE_FILE
+        if not os.path.exists(ATTENDANCE_FILE):
+            return jsonify({"error": "No attendance for today"}), 401
+        
+        df = pd.read_excel(ATTENDANCE_FILE)
+        data = df.to_dict(orient='records')
+        return jsonify(data)
+
+    @app.route('/list_attendance_files', methods=['GET'])
+    def list_attendance_files():
+        attendance_files = [f for f in os.listdir(f'{ATTENDANCE_DIR}') if f.endswith('.xlsx')]
+        return jsonify(attendance_files)
+
+    @app.route('/read_attendance/<filename>', methods=['GET'])
+    def read_attendance(filename):
+        attendance_file_path = os.path.join(ATTENDANCE_DIR, filename)
+        if not os.path.exists(attendance_file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        df = pd.read_excel(attendance_file_path)
+        data = df.to_dict(orient='records')
+        return jsonify(data)
+
+    @app.route('/verify_password', methods=['POST'])
+    def verify_password():
+        data = request.json
+        password = data.get('password')
+        
+        encrypted_password = read_password()
+        decrypted_password = cipher_suite.decrypt(encrypted_password).decode('utf-8')
+        
+        if password == decrypted_password:
+            return jsonify({'status': 'success'}), 200
+        else:
+            return jsonify({'status': 'failure'}), 401
+
+    @app.route('/update_password', methods=['POST'])
+    def update_password():
+        data = request.json
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        encrypted_password = read_password()
+        decrypted_password = cipher_suite.decrypt(encrypted_password).decode('utf-8')
+        
+        if current_password == decrypted_password:
+            new_encrypted_password = cipher_suite.encrypt(new_password.encode('utf-8'))
+            write_password(new_encrypted_password)
+            return jsonify({'status': 'success'}), 200
+        else:
+            return jsonify({'status': 'failure'}), 401
+
+    @app.route('/list_cameras', methods=['GET'])
+    def get_cameras():
+        cameras = list_cameras()
+        return jsonify(cameras)
+
+    @app.route('/change_camera/<cameraIndex>', methods=['GET'])
+    def change_camera(cameraIndex):
+        global camera_index
+        camera_index = int(cameraIndex)
+        return jsonify({"message": "Camera change."}), 200
 
 class VideoCamera:
     # Threading for video capture and processing
@@ -476,3 +479,13 @@ def read_password():
 def write_password(encrypted_password):
     with open(PASSWORD_FILE, 'wb') as file:
         file.write(encrypted_password)
+
+def create_app():
+    """Create and configure the Flask application"""
+    app = Flask(
+        __name__,
+        static_folder=str(os.path.join(BASE_DIR, 'app', 'static')),
+        template_folder=str(os.path.join(BASE_DIR, 'app', 'templates'))
+    )
+    create_api_routes(app)
+    return app
