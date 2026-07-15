@@ -6,13 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from sklearn.decomposition import PCA
 
-if os.path.exists('app/models/svm_model.pkl'):
-    label_encoder = joblib.load('app/models/label_encoder.pkl')
+if os.path.exists('app/model/svm_model.pkl'):
+    label_encoder = joblib.load('app/model/label_encoder.pkl')
 
 def analyze_model():
     global label_encoder
-    data = np.load('app/models/features.npy')
-    labels = np.load('app/models/labels.npy')
+    data = np.load('app/model/features.npy')
+    labels = np.load('app/model/labels.npy')
 
     # Perform PCA to reduce to 2 dimensions for visualization
     pca = PCA(n_components=2)

@@ -6,7 +6,7 @@ def face_filter():
     os.makedirs('app/utils/test_save', exist_ok=True)
     # Directory containing the faces to be filtered
     # faces_folder_dir = 'test_faces'
-    faces_folder_dir = 'app/utils/faces'
+    faces_folder_dir = 'app/faces'
     os.makedirs(faces_folder_dir, exist_ok=True)
     
     folder_count = 0
