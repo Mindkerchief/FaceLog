@@ -52,7 +52,7 @@ A Windows application that can record attendance using facial recognition. This 
 2. In case of capturing a dataset of the same attendees where there is a name conflict, you can temporarily add numbers to the attendee's name during registration and then move the images to the proper folder later.
 3. In case of gathering datasets from external sources like social media and personal photos, you can move those images directly to the proper attendee's folder.
 4. During training, the system automatically deletes datasets with no face or multiple faces.
-5. Sometimes, patterns in the background can be recognized as faces and the program cannot differentiate the error, that is why [facefilter.py](facefilter.py) is created to manually review datasets, especially those which come from external sources.
+5. Sometimes, patterns in the background can be recognized as faces and the program cannot differentiate the error, that is why [facefilter.py](https://github.com/AHG-BSCS/FaceLog/blob/d2fea5b55afef45eb26723cbd392e221c7202a9c/app/utils/facefilter.py) is created to manually review datasets, especially those which come from external sources.
 
 > [!WARNING]
 > Always have a backup of your dataset since training the model will delete invalid datasets.
