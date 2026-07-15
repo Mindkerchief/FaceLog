@@ -1,5 +1,5 @@
-# ![facelog thumbnail][facelog-thumbnail] FaceLog ![facelog badge][facelog-badge]
-A webpage application that can record attendance using the attendee's face. This application provides essential tools to manage attendance during runtime conveniently. Registering new attendees, training models and checking attendance can be done through the web app directly.
+# <img src="https://github.com/AHG-BSCS/FaceLog/blob/ab54d32cf391034d75df41502050832b38004424/app/static/image/icon.png" width="28" alt="Logo Thumbnail"> FaceLog ![facelog badge][facelog-badge]
+A Windows application that can record attendance using facial recognition. This application provides basic tools to register user's face and record attendance. Registering new attendees, training models and checking attendance can be done through the app directly.
 
 ## Table of Contents
 - [Features](#features)
@@ -36,7 +36,8 @@ A webpage application that can record attendance using the attendee's face. This
 > The default password is `admin`.
 
 > [!NOTE]
-> The system performs facial recognition every 0.1 seconds to improve performance. It will recognize face at 30% probability but only record attendance if above 70% probability.
+> The system performs facial recognition every 0.1 seconds to improve performance.
+> It will recognize face at 30% probability but only record attendance if above 70% probability.
 
 ## Guidelines
 ### Dataset Capturing Guidelines
@@ -54,35 +55,32 @@ A webpage application that can record attendance using the attendee's face. This
 5. Sometimes, patterns in the background can be recognized as faces and the program cannot differentiate the error, that is why [facefilter.py](facefilter.py) is created to manually review datasets, especially those which come from external sources.
 
 > [!WARNING]
-> Always have a backup of your dataset since training the model can delete invalid datasets.
+> Always have a backup of your dataset since training the model will delete invalid datasets.
 
 ## Installation
-1. Download the latest version of [LocalLoan][release-page].
-2. Install [FaceLog-1.0.0-Beta.exe][latest-release].
-3. Make sure to include `pip` during Python installation.
-4. Run the application and open [127.0.0.3:3000](http://127.0.0.3:3000) using browser to access the web application.
+1. Download and install the latest version of [FaceLog][release-page].
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
-- **[Visual Studio Code][visual-studio-code]**: For development environment.
-- **[Advanced Installer][advanced-installer]**: For installer.
 - **[LSPU-SPCC BSCS2A A.Y 2023-2024][lspu-spcc-bscs2a-ay-2023-2024]**: For contributing their faces dataset.
 - **[css.gg][css-gg]**: For icons.
 - **[flask_cors][flask-cors]**: For handling resource sharing between Python and JavaScript.
 - **[waitress][waitress]**: For production-ready WSGI server.
-- **[opencv-python][opencv-python]**: For image processing.
-- **[numpy][numpy]**: For handling different types of arrays.
-- **[scikit-learn][scikit-learn]**: For machine learning and statistical modeling.
+- **[PyWebview][pywebview]**: For standalone web app wrapper.
+- **[PyInstaller][pyinstaller]**: For building the app into executables.
+- **[Inno Setup][inno-setup]**: For installer.
 - **[facenet-pytorch][facenet-pytorch]**: For providing a pre-trained model for facial recognition.
+- **[opencv-python][opencv-python]**: For image processing.
+- **[scikit-learn][scikit-learn]**: For machine learning and statistical modeling.
+- **[numpy][numpy]**: For handling different types of arrays.
 - **[pandas][pandas]**: For data manipulation and analysis of Excel data.
 - **[openpyxl][openpyxl]**: For reading and writing Excel files.
 - **[matplotlib][matplotlib]**: For generating scatter-plot chart.
 - **[cryptography][cryptography]**: For generating the key, encrypting and decrypting.
 
 <!-- Reference -->
-[facelog-thumbnail]: https://github.com/Mindkerchief/FaceLog/assets/130748576/0e2ea03f-d343-4ba2-9807-f507ac6cfe3d
 [facelog-badge]: https://img.shields.io/badge/WebApp-Realtime_Facial_Recognition_Attendance_System-6850A8
 
 [facial-recognition]: https://github.com/Mindkerchief/FaceLog/assets/130748576/606640e0-acb8-41d1-8a3e-0dcda1857c30
@@ -93,18 +91,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [camera-selector]: https://github.com/Mindkerchief/FaceLog/assets/130748576/54b4918b-64fb-4ddb-832d-23098450c6df
 [attendance-selector]: https://github.com/Mindkerchief/FaceLog/assets/130748576/debc2548-9ce1-40b0-bfdb-b77e3800c627
 
-[release-page]: https://github.com/Mindkerchief/FaceLog/releases/tag/v1.0.0-Beta
-[latest-release]: https://github.com/Mindkerchief/FaceLog/releases/download/v1.0.0-Beta/FaceLog-1.0.0-Beta.exe
-[visual-studio-code]: https://code.visualstudio.com/docs
-[advanced-installer]: https://www.advancedinstaller.com/user-guide/using.html
+[release-page]: https://github.com/AHG-BSCS/FaceLog/releases
 [lspu-spcc-bscs2a-ay-2023-2024]: https://web.facebook.com/photo.php?fbid=626282756192961&set=a.626292752858628&type=3
 [css-gg]: https://css.gg/
 [flask-cors]: https://flask-cors.readthedocs.io/en/latest/api.html
 [waitress]: https://docs.pylonsproject.org/projects/waitress/en/stable/index.html
-[opencv-python]: https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html
-[numpy]: https://numpy.org/doc/stable/index.html
-[scikit-learn]: https://scikit-learn.org/0.21/documentation.html
+[pywebview]: https://pywebview.flowrl.com/guide/
+[pyinstaller]: https://pyinstaller.org/en/stable/
+[inno-setup]: https://jrsoftware.org/ishelp/
 [facenet-pytorch]: https://github.com/timesler/facenet-pytorch
+[opencv-python]: https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html
+[scikit-learn]: https://scikit-learn.org/0.21/documentation.html
+[numpy]: https://numpy.org/doc/stable/index.html
 [pandas]: https://pandas.pydata.org/docs/
 [openpyxl]: https://openpyxl.readthedocs.io/en/stable/
 [matplotlib]: https://matplotlib.org/stable/users/index
