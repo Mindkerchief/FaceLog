@@ -66,19 +66,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 - **[LSPU-SPCC BSCS2A A.Y 2023-2024][lspu-spcc-bscs2a-ay-2023-2024]**: For contributing their faces dataset.
 - **[css.gg][css-gg]**: For icons.
-- **[flask_cors][flask-cors]**: For handling resource sharing between Python and JavaScript.
-- **[waitress][waitress]**: For production-ready WSGI server.
+- **[Flask CORS][flask-cors]**: For handling resource sharing between Python and JavaScript.
+- **[Waitress][waitress]**: For production-ready WSGI server.
 - **[PyWebview][pywebview]**: For standalone web app wrapper.
 - **[PyInstaller][pyinstaller]**: For building the app into executables.
 - **[Inno Setup][inno-setup]**: For installer.
-- **[facenet-pytorch][facenet-pytorch]**: For providing a pre-trained model for facial recognition.
-- **[opencv-python][opencv-python]**: For image processing.
-- **[scikit-learn][scikit-learn]**: For machine learning and statistical modeling.
-- **[numpy][numpy]**: For handling different types of arrays.
-- **[pandas][pandas]**: For data manipulation and analysis of Excel data.
-- **[openpyxl][openpyxl]**: For reading and writing Excel files.
-- **[matplotlib][matplotlib]**: For generating scatter-plot chart.
-- **[cryptography][cryptography]**: For generating the key, encrypting and decrypting.
+- **[Facenet-pytorch][facenet-pytorch]**: For providing a pre-trained model for facial recognition.
+- **[OpenCV][opencv-python]**: For image processing.
+- **[Scikit-learn][scikit-learn]**: For machine learning and statistical modeling.
+- **[Numpy][numpy]**: For handling different types of arrays.
+- **[Pandas][pandas]**: For data manipulation and analysis of Excel data.
+- **[Openpyxl][openpyxl]**: For reading and writing Excel files.
+- **[Matplotlib][matplotlib]**: For generating scatter-plot chart.
+- **[Cryptography][cryptography]**: For generating the key, encrypting and decrypting.
 
 <!-- Reference -->
 [facelog-badge]: https://img.shields.io/badge/WebApp-Realtime_Facial_Recognition_Attendance_System-6850A8
@@ -94,16 +94,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [release-page]: https://github.com/AHG-BSCS/FaceLog/releases
 [lspu-spcc-bscs2a-ay-2023-2024]: https://web.facebook.com/photo.php?fbid=626282756192961&set=a.626292752858628&type=3
 [css-gg]: https://css.gg/
-[flask-cors]: https://flask-cors.readthedocs.io/en/latest/api.html
-[waitress]: https://docs.pylonsproject.org/projects/waitress/en/stable/index.html
-[pywebview]: https://pywebview.flowrl.com/guide/
-[pyinstaller]: https://pyinstaller.org/en/stable/
+[flask-cors]: https://pypi.org/project/flask-cors/
+[waitress]: https://pypi.org/project/waitress/
+[pywebview]: https://pypi.org/project/pywebview/
+[pyinstaller]: https://pypi.org/project/pyinstaller/
 [inno-setup]: https://jrsoftware.org/ishelp/
-[facenet-pytorch]: https://github.com/timesler/facenet-pytorch
-[opencv-python]: https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html
-[scikit-learn]: https://scikit-learn.org/0.21/documentation.html
-[numpy]: https://numpy.org/doc/stable/index.html
-[pandas]: https://pandas.pydata.org/docs/
-[openpyxl]: https://openpyxl.readthedocs.io/en/stable/
-[matplotlib]: https://matplotlib.org/stable/users/index
-[cryptography]: https://cryptography.io/en/latest/
+[facenet-pytorch]: https://pypi.org/project/facenet-pytorch/
+[opencv-python]: https://pypi.org/project/opencv-python/
+[scikit-learn]: https://pypi.org/project/scikit-learn/
+[numpy]: https://pypi.org/project/numpy/
+[pandas]: https://pypi.org/project/pandas/
+[openpyxl]: https://pypi.org/project/openpyxl/
+[matplotlib]: https://pypi.org/project/matplotlib/
+[cryptography]: https://pypi.org/project/cryptography/
